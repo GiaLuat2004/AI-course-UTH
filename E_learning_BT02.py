@@ -1,3 +1,8 @@
+'''
+Bài toàn đong nước (Water Jug Problem) với hai bình có dung tích khác nhau.
+Mục tiêu là đong được một lượng nước cụ thể bằng cách sử dụng hai bình này và các hành động đổ đầy, đổ hết, và rót nước giữa hai bình.
+Giải pháp được thực hiện bằng hai thuật toán tìm kiếm: BFS (Tìm kiếm theo chiều rộng) và DFS (Tìm kiếm theo chiều sâu).
+'''
 from collections import deque
 
 # Cấu hình bài toán

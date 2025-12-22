@@ -1,270 +1,394 @@
 import heapq
-from typing import Tuple, List, Set
-import time
+from typing import List, Tuple, Dict, Set
 
-# Trạng thái đích B: _ 1 2 / 3 4 5 / 6 7 8
-GOAL = (0, 1, 2, 3, 4, 5, 6, 7, 8)
+# ==================================================
+# TRẠNG THÁI ĐÍCH
+# ==================================================
+GOAL = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8]
+]
 
-def manhattan_distance(state: Tuple[int, ...]) -> int:
+# Pre-compute vị trí đích của mỗi số để tối ưu hóa manhattan_distance
+GOAL_POS: Dict[int, Tuple[int, int]] = {}
+for i in range(3):
+    for j in range(3):
+        GOAL_POS[GOAL[i][j]] = (i, j)
+
+# ==================================================
+# HEURISTIC: MANHATTAN DISTANCE
+# ==================================================
+def manhattan_distance(state: List[List[int]]) -> int:
     """
     Tính khoảng cách Manhattan từ trạng thái hiện tại đến trạng thái đích.
     Manhattan distance = tổng khoảng cách hàng + tổng khoảng cách cột của mỗi ô.
     """
-    distance = 0
-    for i, value in enumerate(state):
-        if value == 0:  # Bỏ qua ô trống
-            continue
-        # Vị trí hiện tại
-        current_row, current_col = divmod(i, 3)
-        # Vị trí đích của value
-        goal_index = GOAL.index(value)
-        goal_row, goal_col = divmod(goal_index, 3)
-        # Cộng khoảng cách Manhattan
-        distance += abs(current_row - goal_row) + abs(current_col - goal_col)
-    return distance
+    dist = 0
+    for i in range(3):
+        for j in range(3):
+            val = state[i][j]
+            if val != 0:  # Bỏ qua ô trống
+                gi, gj = GOAL_POS[val]  # Vị trí đích của giá trị val
+                dist += abs(i - gi) + abs(j - gj)
+    return dist
 
-def get_neighbors(state: Tuple[int, ...]) -> List[Tuple[int, ...]]:
+# ==================================================
+# SINH TRẠNG THÁI KỀ
+# ==================================================
+def get_neighbors(state: List[List[int]]) -> List[List[List[int]]]:
     """
     Tạo các trạng thái kề bằng cách di chuyển ô trống lên/xuống/trái/phải.
     """
-    blank_index = state.index(0)
-    row, col = divmod(blank_index, 3)
-    neighbors_list = []
+    neighbors = []
     
-    # Thử 4 hướng: lên, xuống, trái, phải
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-    
-    for dr, dc in directions:
-        new_row, new_col = row + dr, col + dc
-        # Kiểm tra trong phạm vi bàn cờ 3x3
-        if 0 <= new_row < 3 and 0 <= new_col < 3:
-            new_blank_index = new_row * 3 + new_col
-            # Tạo trạng thái mới bằng cách hoán đổi ô trống với ô kề
-            new_state = list(state)
-            new_state[blank_index], new_state[new_blank_index] = \
-                new_state[new_blank_index], new_state[blank_index]
-            neighbors_list.append(tuple(new_state))
-    
-    return neighbors_list
+    # Tìm vị trí ô trống (0)
+    x, y = 0, 0
+    for i in range(3):
+        for j in range(3):
+            if state[i][j] == 0:
+                x, y = i, j
+                break
 
-def search(start: Tuple[int, ...], algorithm: str = 'astar') -> Tuple[List[Tuple[int, ...]], int]:
+    # Thử 4 hướng: lên, xuống, trái, phải
+    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        nx, ny = x + dx, y + dy
+        if 0 <= nx < 3 and 0 <= ny < 3:
+            # Tạo trạng thái mới bằng cách copy và hoán đổi
+            new_state = [row[:] for row in state]  # Deep copy
+            new_state[x][y], new_state[nx][ny] = new_state[nx][ny], new_state[x][y]
+            neighbors.append(new_state)
+
+    return neighbors
+
+# ==================================================
+# TIỆN ÍCH
+# ==================================================
+def to_tuple(state: List[List[int]]) -> Tuple:
+    """Chuyển mảng 2D thành tuple để dùng làm key trong set/dict."""
+    return tuple(tuple(row) for row in state)
+
+def states_equal(state1: List[List[int]], state2: List[List[int]]) -> bool:
+    """Kiểm tra hai trạng thái có bằng nhau không."""
+    for i in range(3):
+        for j in range(3):
+            if state1[i][j] != state2[i][j]:
+                return False
+    return True
+
+def print_puzzle_inline(state: List[List[int]]) -> List[str]:
+    """Trả về các dòng của puzzle để in inline trong bảng."""
+    lines = []
+    lines.append("┌───┬───┬───┐")
+    for i in range(3):
+        row = state[i]
+        lines.append("│ " + " │ ".join('_' if x == 0 else str(x) for x in row) + " │")
+        if i < 2:
+            lines.append("├───┼───┼───┤")
+    lines.append("└───┴───┴───┘")
+    return lines
+
+def print_puzzle_box(state: List[List[int]]):
+    """In trạng thái dạng bảng đẹp."""
+    for line in print_puzzle_inline(state):
+        print(line)
+
+# ==================================================
+# THUẬT TOÁN TÌM KIẾM
+# ==================================================
+def search(start: List[List[int]], algorithm: str) -> Tuple[List[List[List[int]]], int, int]:
     """
     Tìm kiếm đường đi từ trạng thái ban đầu đến trạng thái đích.
     
     Args:
-        start: Trạng thái ban đầu
+        start: Trạng thái ban đầu (mảng 2D)
         algorithm: 'astar' hoặc 'greedy'
     
     Returns:
-        (path, nodes_expanded): Đường đi và số nút được mở rộng
+        (path, nodes_expanded, nodes_generated)
+        
+    LOGIC QUAN TRỌNG:
+        - Greedy BFS: Priority = h(n) (chỉ heuristic)
+        - A*: Priority = f(n) = g(n) + h(n) (chi phí thực + heuristic)
     """
-    # Priority queue: (priority, counter, g_cost, state, path)
-    # counter để đảm bảo thứ tự khi priority bằng nhau
+    pq = []
+    visited: Set[Tuple] = set()
+    g_score: Dict[Tuple, int] = {}
+    
+    # Tính heuristic ban đầu
+    h0 = manhattan_distance(start)
+    start_t = to_tuple(start)
+    
+    # Counter để đảm bảo thứ tự khi priority bằng nhau
     counter = 0
-    priority_queue = []
-    h = manhattan_distance(start)
     
-    if algorithm == 'astar':
-        priority = 0 + h  # f = g + h
+    # LOGIC KHÁC BIỆT:
+    # - Greedy BFS: chỉ dùng h(n)
+    # - A*: dùng g(n) + h(n)
+    if algorithm == "astar":
+        priority = 0 + h0  # f = g + h
     else:  # greedy
-        priority = h  # chỉ dùng h
+        priority = h0  # chỉ h
     
-    heapq.heappush(priority_queue, (priority, counter, 0, start, []))
-    counter += 1
+    heapq.heappush(pq, (priority, counter, 0, start, []))
+    g_score[start_t] = 0
     
-    visited: Set[Tuple[int, ...]] = set()
     nodes_expanded = 0
+    nodes_generated = 1
     
-    while priority_queue:
-        _, _, g_cost, current_state, path = heapq.heappop(priority_queue)
+    while pq:
+        _, _, g, current, path = heapq.heappop(pq)
+        current_t = to_tuple(current)
         
-        # Kiểm tra đã đạt đích chưa
-        if current_state == GOAL:
-            return path + [current_state], nodes_expanded
-        
-        # Bỏ qua nếu đã thăm
-        if current_state in visited:
+        # Kiểm tra đã thăm chưa
+        if current_t in visited:
             continue
         
-        visited.add(current_state)
+        # Kiểm tra đạt đích chưa
+        if states_equal(current, GOAL):
+            return path + [current], nodes_expanded, nodes_generated
+        
+        visited.add(current_t)
         nodes_expanded += 1
         
         # Mở rộng các trạng thái kề
-        for neighbor in get_neighbors(current_state):
-            if neighbor not in visited:
-                new_g = g_cost + 1
-                h = manhattan_distance(neighbor)
-                
-                if algorithm == 'astar':
-                    priority = new_g + h  # f = g + h
-                else:  # greedy
-                    priority = h  # chỉ dùng h
-                
-                heapq.heappush(priority_queue, 
-                             (priority, counter, new_g, neighbor, path + [current_state]))
-                counter += 1
+        for neighbor in get_neighbors(current):
+            n_t = to_tuple(neighbor)
+            new_g = g + 1
+            
+            if n_t in visited:
+                continue
+            
+            # Kiểm tra xem có tìm được đường đi tốt hơn không
+            if n_t in g_score and new_g >= g_score[n_t]:
+                continue
+            
+            g_score[n_t] = new_g
+            h = manhattan_distance(neighbor)
+            
+            # LOGIC KHÁC BIỆT GIỮA 2 THUẬT TOÁN:
+            if algorithm == "astar":
+                priority = new_g + h  # A*: f(n) = g(n) + h(n)
+            else:  # greedy
+                priority = h  # Greedy BFS: chỉ dùng h(n)
+            
+            counter += 1
+            heapq.heappush(
+                pq,
+                (priority, counter, new_g, neighbor, path + [current])
+            )
+            nodes_generated += 1
     
-    return [], nodes_expanded  # Không tìm thấy lời giải
+    return [], nodes_expanded, nodes_generated
 
-def print_state(state: Tuple[int, ...]) -> None:
-    """In trạng thái dạng lưới 3x3."""
-    for i in range(0, 9, 3):
-        row = state[i:i+3]
-        print(' '.join('_' if x == 0 else str(x) for x in row))
-
-def print_solution(path: List[Tuple[int, ...]], algorithm_name: str, 
-                   nodes_expanded: int, exec_time: float) -> None:
-    """In chi tiết lời giải."""
-    print(f"\n{'='*70}")
-    print(f"KẾT QUẢ THUẬT TOÁN: {algorithm_name}")
-    print(f"{'='*70}")
+# ==================================================
+# IN LỜI GIẢI
+# ==================================================
+def print_solution(path: List[List[List[int]]], title: str, nodes_expanded: int, nodes_generated: int):
+    """In chi tiết lời giải dạng bảng thống kê."""
+    print("\n" + "=" * 100)
+    print(title.center(100))
+    print("=" * 100)
     
     if not path:
         print("❌ Không tìm thấy lời giải!")
         return
     
     steps = len(path) - 1
-    print(f"✓ Số bước di chuyển: {steps}")
-    print(f"✓ Số nút được mở rộng: {nodes_expanded}")
-    print(f"✓ Thời gian thực thi: {exec_time:.4f} giây")
+    print(f"\n📊 THỐNG KÊ TỔNG QUAN:")
+    print(f"   • Số bước di chuyển: {steps}")
+    print(f"   • Số nút được mở rộng (explored): {nodes_expanded}")
+    print(f"   • Số nút được sinh ra (generated): {nodes_generated}")
+    print(f"   • Branching factor trung bình: {nodes_generated / max(nodes_expanded, 1):.2f}")
     
-    print(f"\n{'─'*70}")
-    print("CHI TIẾT CÁC BƯỚC DI CHUYỂN:")
-    print(f"{'─'*70}")
+    print("\n" + "=" * 100)
+    print("BẢNG THỐNG KÊ CHI TIẾT CÁC BƯỚC".center(100))
+    print("=" * 100)
     
-    for i, state in enumerate(path):
-        if i == 0:
-            print(f"\nTrạng thái ban đầu:")
-        elif i == len(path) - 1:
-            print(f"\nBước {i}: Đạt đích!")
+    # In header của bảng
+    print(f"\n{'Bước':^8} │ {'h(n)':^6} │ {'g(n)':^6} │ {'f(n)':^6} │ {'Trạng thái Puzzle':^50}")
+    print("─" * 8 + "─┼─" + "─" * 6 + "─┼─" + "─" * 6 + "─┼─" + "─" * 6 + "─┼─" + "─" * 50)
+    
+    # In từng bước
+    for step, state in enumerate(path):
+        h = manhattan_distance(state)
+        g = step
+        f = g + h
+        
+        # Lấy các dòng của puzzle
+        puzzle_lines = print_puzzle_inline(state)
+        
+        # In dòng đầu tiên với thông tin bước
+        if step == 0:
+            step_label = "Đầu"
+        elif step == len(path) - 1:
+            step_label = "Đích"
         else:
-            print(f"\nBước {i}:")
-        print_state(state)
-        if i < len(path) - 1:
-            print(f"  h(n) = {manhattan_distance(state)}")
+            step_label = str(step)
+        
+        print(f"{step_label:^8} │ {h:^6} │ {g:^6} │ {f:^6} │ {puzzle_lines[0]}")
+        
+        # In các dòng còn lại của puzzle
+        for i in range(1, len(puzzle_lines)):
+            print(f"{'':^8} │ {'':^6} │ {'':^6} │ {'':^6} │ {puzzle_lines[i]}")
+        
+        # In dòng phân cách giữa các bước (trừ bước cuối)
+        if step < len(path) - 1:
+            print("─" * 8 + "─┼─" + "─" * 6 + "─┼─" + "─" * 6 + "─┼─" + "─" * 6 + "─┼─" + "─" * 50)
+    
+    print("=" * 100)
 
-def verify_solution(path: List[Tuple[int, ...]]) -> bool:
+def verify_solution(path: List[List[List[int]]]) -> bool:
     """Kiểm tra tính hợp lệ của lời giải."""
     if not path:
+        print("❌ Không có lời giải!")
         return False
     
     # Kiểm tra trạng thái cuối có phải là đích không
-    if path[-1] != GOAL:
+    if not states_equal(path[-1], GOAL):
         print("❌ Lỗi: Trạng thái cuối không phải là đích!")
         return False
     
-    # Kiểm tra mỗi bước có hợp lệ không (chỉ di chuyển ô trống 1 bước)
+    # Kiểm tra mỗi bước có hợp lệ không
     for i in range(len(path) - 1):
         current = path[i]
         next_state = path[i + 1]
         
         # Đếm số ô khác nhau
-        diff_count = sum(1 for j in range(9) if current[j] != next_state[j])
+        diff_count = 0
+        for row in range(3):
+            for col in range(3):
+                if current[row][col] != next_state[row][col]:
+                    diff_count += 1
         
-        if diff_count != 2:  # Phải có đúng 2 ô khác nhau (ô trống và ô bị hoán đổi)
+        # Phải có đúng 2 ô khác nhau (ô trống và ô bị hoán đổi)
+        if diff_count != 2:
             print(f"❌ Lỗi: Bước {i+1} không hợp lệ! Có {diff_count} ô thay đổi.")
+            return False
+        
+        # Kiểm tra ô trống di chuyển đúng cách (chỉ 1 ô kề)
+        x1, y1, x2, y2 = 0, 0, 0, 0
+        for row in range(3):
+            for col in range(3):
+                if current[row][col] == 0:
+                    x1, y1 = row, col
+                if next_state[row][col] == 0:
+                    x2, y2 = row, col
+        
+        manhattan_move = abs(x1 - x2) + abs(y1 - y2)
+        if manhattan_move != 1:
+            print(f"❌ Lỗi: Bước {i+1} - ô trống di chuyển không hợp lệ!")
             return False
     
     print("✓ Lời giải hợp lệ!")
     return True
 
+# ==================================================
+# MAIN
+# ==================================================
 def main():
     # Trạng thái ban đầu A: 7 2 4 / 5 _ 6 / 8 3 1
-    start_state = (7, 2, 4, 5, 0, 6, 8, 3, 1)
+    start = [
+        [7, 2, 4],
+        [5, 0, 6],
+        [8, 3, 1]
+    ]
     
-    print("="*70)
+    print("=" * 70)
     print("BÀI TOÁN 8 Ô TRƯỢT (8-PUZZLE)")
-    print("="*70)
+    print("=" * 70)
     
     print("\n📌 TRẠNG THÁI BAN ĐẦU (A):")
-    print_state(start_state)
-    print(f"Manhattan distance đến đích: {manhattan_distance(start_state)}")
+    print_puzzle_box(start)
+    print(f"Manhattan distance đến đích: {manhattan_distance(start)}")
     
     print("\n📌 TRẠNG THÁI ĐÍCH (B):")
-    print_state(GOAL)
+    print_puzzle_box(GOAL)
     
     # =====================================================================
     # THUẬT TOÁN 1: GREEDY BEST-FIRST SEARCH
     # =====================================================================
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("THUẬT TOÁN 1: GREEDY BEST-FIRST SEARCH (Greedy BeFS)")
-    print("="*70)
-    print("Chiến lược: Chỉ sử dụng hàm heuristic h(n) = Manhattan distance")
-    print("Ưu điểm: Tìm kiếm nhanh, mở rộng ít nút")
-    print("Nhược điểm: Không đảm bảo tìm được lời giải tối ưu")
+    print("=" * 70)
+    print("📖 Chiến lược: Priority = h(n) = Manhattan distance")
+    print("   - Chỉ xem xét heuristic, bỏ qua chi phí đã đi")
+    print("   - Chọn trạng thái gần đích nhất theo heuristic")
+    print("✓ Ưu điểm: Tìm kiếm nhanh, mở rộng ít nút")
+    print("✗ Nhược điểm: Không đảm bảo tìm được lời giải tối ưu")
     
-    start_time = time.time()
-    path_greedy, nodes_greedy = search(start_state, algorithm='greedy')
-    time_greedy = time.time() - start_time
+    path_greedy, nodes_greedy, gen_greedy = search(start, algorithm="greedy")
+    print_solution(path_greedy, "KẾT QUẢ: Greedy Best-First Search", nodes_greedy, gen_greedy)
     
-    print_solution(path_greedy, "Greedy Best-First Search", nodes_greedy, time_greedy)
-    
-    print("\n" + "─"*70)
+    print("\n" + "─" * 70)
     print("KIỂM TRA TÍNH HỢP LỆ CỦA LỜI GIẢI GREEDY BeFS:")
-    print("─"*70)
+    print("─" * 70)
     verify_solution(path_greedy)
     
     # =====================================================================
     # THUẬT TOÁN 2: A* SEARCH
     # =====================================================================
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("THUẬT TOÁN 2: A* SEARCH")
-    print("="*70)
-    print("Chiến lược: Sử dụng f(n) = g(n) + h(n)")
-    print("  - g(n): Chi phí thực tế từ điểm bắt đầu")
-    print("  - h(n): Ước lượng chi phí đến đích (Manhattan distance)")
-    print("Ưu điểm: Đảm bảo tìm được lời giải tối ưu (đường đi ngắn nhất)")
-    print("Nhược điểm: Có thể mở rộng nhiều nút hơn Greedy BeFS")
+    print("=" * 70)
+    print("📖 Chiến lược: Priority = f(n) = g(n) + h(n)")
+    print("   - g(n): Chi phí thực tế từ điểm bắt đầu (số bước đã đi)")
+    print("   - h(n): Ước lượng chi phí đến đích (Manhattan distance)")
+    print("   - Kết hợp cả chi phí đã đi và ước lượng còn lại")
+    print("✓ Ưu điểm: Đảm bảo tìm được lời giải tối ưu (admissible heuristic)")
+    print("✗ Nhược điểm: Có thể mở rộng nhiều nút hơn Greedy BeFS")
     
-    start_time = time.time()
-    path_astar, nodes_astar = search(start_state, algorithm='astar')
-    time_astar = time.time() - start_time
+    path_astar, nodes_astar, gen_astar = search(start, algorithm="astar")
+    print_solution(path_astar, "KẾT QUẢ: A* Search", nodes_astar, gen_astar)
     
-    print_solution(path_astar, "A* Search", nodes_astar, time_astar)
-    
-    print("\n" + "─"*70)
+    print("\n" + "─" * 70)
     print("KIỂM TRA TÍNH HỢP LỆ CỦA LỜI GIẢI A*:")
-    print("─"*70)
+    print("─" * 70)
     verify_solution(path_astar)
     
     # =====================================================================
     # SO SÁNH KẾT QUẢ
     # =====================================================================
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("SO SÁNH VÀ ĐÁNH GIÁ KẾT QUẢ")
-    print("="*70)
+    print("=" * 70)
     
     if path_greedy and path_astar:
         steps_greedy = len(path_greedy) - 1
         steps_astar = len(path_astar) - 1
         
-        print(f"\n{'Tiêu chí':<30} {'Greedy BeFS':>15} {'A* Search':>15}")
-        print("─"*70)
-        print(f"{'Số bước di chuyển':<30} {steps_greedy:>15} {steps_astar:>15}")
-        print(f"{'Số nút được mở rộng':<30} {nodes_greedy:>15} {nodes_astar:>15}")
-        print(f"{'Thời gian thực thi (s)':<30} {time_greedy:>15.4f} {time_astar:>15.4f}")
+        print(f"\n{'Tiêu chí':<35} {'Greedy BeFS':>15} {'A* Search':>15}")
+        print("─" * 70)
+        print(f"{'Số bước di chuyển':<35} {steps_greedy:>15} {steps_astar:>15}")
+        print(f"{'Số nút mở rộng (explored)':<35} {nodes_greedy:>15} {nodes_astar:>15}")
+        print(f"{'Số nút sinh ra (generated)':<35} {gen_greedy:>15} {gen_astar:>15}")
         
-        print("\n" + "─"*70)
-        print("KẾT LUẬN:")
-        print("─"*70)
+        print("\n" + "─" * 70)
+        print("PHÂN TÍCH:")
+        print("─" * 70)
         
-        if steps_astar <= steps_greedy:
-            print(f"✓ A* tìm được lời giải TỐI ƯU với {steps_astar} bước")
-            if steps_astar < steps_greedy:
-                improvement = ((steps_greedy - steps_astar) / steps_greedy) * 100
-                print(f"✓ A* ngắn hơn Greedy BeFS {steps_greedy - steps_astar} bước ({improvement:.1f}% tốt hơn)")
+        if steps_astar < steps_greedy:
+            improvement = ((steps_greedy - steps_astar) / steps_greedy) * 100
+            print(f"\n📊 Độ dài đường đi:")
+            print(f"   ✓ A* tìm được lời giải TỐI ƯU với {steps_astar} bước")
+            print(f"   ✓ A* ngắn hơn Greedy BeFS {steps_greedy - steps_astar} bước ({improvement:.1f}% tốt hơn)")
+            print(f"   ✗ Greedy BeFS không tối ưu: {steps_greedy} bước")
+        elif steps_astar == steps_greedy:
+            print(f"\n📊 Độ dài đường đi:")
+            print(f"   ✓ Cả hai đều tìm được lời giải tối ưu: {steps_astar} bước")
         
         if nodes_greedy < nodes_astar:
             reduction = ((nodes_astar - nodes_greedy) / nodes_astar) * 100
-            print(f"✓ Greedy BeFS hiệu quả hơn về không gian, mở rộng ít hơn {nodes_astar - nodes_greedy} nút ({reduction:.1f}%)")
+            print(f"\n📊 Hiệu quả không gian tìm kiếm:")
+            print(f"   ✓ Greedy BeFS hiệu quả hơn, mở rộng ít hơn {nodes_astar - nodes_greedy} nút ({reduction:.1f}%)")
+            print(f"   ✗ A* phải khám phá nhiều nút hơn để đảm bảo tối ưu")
         
-        if time_greedy < time_astar:
-            print(f"✓ Greedy BeFS nhanh hơn {time_astar - time_greedy:.4f} giây")
-        
-        print(f"\n💡 Với heuristic Manhattan distance:")
-        print(f"   - A* đảm bảo tìm được đường đi ngắn nhất")
-        print(f"   - Greedy BeFS có thể nhanh hơn nhưng không đảm bảo tối ưu")
-        print(f"   - Cả hai thuật toán đều sử dụng heuristic admissible (không overestimate)")
+        print(f"\n💡 Kết luận:")
+        print(f"   1. A* đảm bảo tìm đường đi NGẮN NHẤT ({steps_astar} bước)")
+        print(f"   2. Greedy BeFS nhanh hơn nhưng không đảm bảo tối ưu ({steps_greedy} bước)")
+        print(f"   3. Heuristic Manhattan không bao giờ overestimate khoảng cách thực")
+        print(f"   4. A* sử dụng f(n) = g(n) + h(n) để cân bằng giữa chi phí và heuristic")
+        print(f"   5. Greedy BeFS chỉ dùng h(n), có thể bị lạc vào local minimum")
 
 if __name__ == "__main__":
     main()
