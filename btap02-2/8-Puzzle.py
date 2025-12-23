@@ -248,12 +248,6 @@ def print_solution(path: List[List[List[int]]], title: str, nodes_expanded: int,
         return
     
     steps = len(path) - 1
-    print(f"\n📊 THỐNG KÊ TỔNG QUAN:")
-    print(f"   • Số bước di chuyển: {steps}")
-    print(f"   • Số nút được mở rộng (explored): {nodes_expanded}")
-    print(f"   • Số nút được sinh ra (generated): {nodes_generated}")
-    print(f"   • Branching factor trung bình: {nodes_generated / max(nodes_expanded, 1):.2f}")
-    
     print("\n" + "=" * 100)
     print("BẢNG THỐNG KÊ CHI TIẾT CÁC BƯỚC (với chi tiết tính Manhattan distance)".center(100))
     print("=" * 100)
@@ -292,52 +286,11 @@ def print_solution(path: List[List[List[int]]], title: str, nodes_expanded: int,
     
     print("└────────┴────────┴────────┴────────┴─────────────────────────────────────────┘")
     
+    print(f"\n📊 THỐNG KÊ TỔNG QUAN:")
+    print(f"   • Số bước di chuyển: {steps}")
+    print(f"   • Số nút được mở rộng (explored): {nodes_expanded}")
+    print(f"   • Số nút được sinh ra (generated): {nodes_generated}")    
     print("\n" + "=" * 100)
-
-def verify_solution(path: List[List[List[int]]]) -> bool:
-    """Kiểm tra tính hợp lệ của lời giải."""
-    if not path:
-        print("❌ Không có lời giải!")
-        return False
-    
-    # Kiểm tra trạng thái cuối có phải là đích không
-    if not states_equal(path[-1], GOAL):
-        print("❌ Lỗi: Trạng thái cuối không phải là đích!")
-        return False
-    
-    # Kiểm tra mỗi bước có hợp lệ không
-    for i in range(len(path) - 1):
-        current = path[i]
-        next_state = path[i + 1]
-        
-        # Đếm số ô khác nhau
-        diff_count = 0
-        for row in range(3):
-            for col in range(3):
-                if current[row][col] != next_state[row][col]:
-                    diff_count += 1
-        
-        # Phải có đúng 2 ô khác nhau (ô trống và ô bị hoán đổi)
-        if diff_count != 2:
-            print(f"❌ Lỗi: Bước {i+1} không hợp lệ! Có {diff_count} ô thay đổi.")
-            return False
-        
-        # Kiểm tra ô trống di chuyển đúng cách (chỉ 1 ô kề)
-        x1, y1, x2, y2 = 0, 0, 0, 0
-        for row in range(3):
-            for col in range(3):
-                if current[row][col] == 0:
-                    x1, y1 = row, col
-                if next_state[row][col] == 0:
-                    x2, y2 = row, col
-        
-        manhattan_move = abs(x1 - x2) + abs(y1 - y2)
-        if manhattan_move != 1:
-            print(f"❌ Lỗi: Bước {i+1} - ô trống di chuyển không hợp lệ!")
-            return False
-    
-    print("✓ Lời giải hợp lệ!")
-    return True
 
 # ==================================================
 # MAIN
@@ -384,11 +337,6 @@ def main():
     path_greedy, nodes_greedy, gen_greedy = greedy_bfs(start)
     print_solution(path_greedy, "KẾT QUẢ: Greedy Best-First Search", nodes_greedy, gen_greedy)
     
-    print("\n" + "─" * 70)
-    print("KIỂM TRA TÍNH HỢP LỆ CỦA LỜI GIẢI GREEDY BeFS:")
-    print("─" * 70)
-    verify_solution(path_greedy)
-    
     # =====================================================================
     # THUẬT TOÁN 2: A* SEARCH
     # =====================================================================
@@ -404,55 +352,6 @@ def main():
     
     path_astar, nodes_astar, gen_astar = astar_search(start)
     print_solution(path_astar, "KẾT QUẢ: A* Search", nodes_astar, gen_astar)
-    
-    print("\n" + "─" * 70)
-    print("KIỂM TRA TÍNH HỢP LỆ CỦA LỜI GIẢI A*:")
-    print("─" * 70)
-    verify_solution(path_astar)
-    
-    # =====================================================================
-    # SO SÁNH KẾT QUẢ
-    # =====================================================================
-    print("\n" + "=" * 70)
-    print("SO SÁNH VÀ ĐÁNH GIÁ KẾT QUẢ")
-    print("=" * 70)
-    
-    if path_greedy and path_astar:
-        steps_greedy = len(path_greedy) - 1
-        steps_astar = len(path_astar) - 1
-        
-        print(f"\n{'Tiêu chí':<35} {'Greedy BeFS':>15} {'A* Search':>15}")
-        print("─" * 70)
-        print(f"{'Số bước di chuyển':<35} {steps_greedy:>15} {steps_astar:>15}")
-        print(f"{'Số nút mở rộng (explored)':<35} {nodes_greedy:>15} {nodes_astar:>15}")
-        print(f"{'Số nút sinh ra (generated)':<35} {gen_greedy:>15} {gen_astar:>15}")
-        
-        print("\n" + "─" * 70)
-        print("PHÂN TÍCH:")
-        print("─" * 70)
-        
-        if steps_astar < steps_greedy:
-            improvement = ((steps_greedy - steps_astar) / steps_greedy) * 100
-            print(f"\n📊 Độ dài đường đi:")
-            print(f"   ✓ A* tìm được lời giải TỐI ƯU với {steps_astar} bước")
-            print(f"   ✓ A* ngắn hơn Greedy BeFS {steps_greedy - steps_astar} bước ({improvement:.1f}% tốt hơn)")
-            print(f"   ✗ Greedy BeFS không tối ưu: {steps_greedy} bước")
-        elif steps_astar == steps_greedy:
-            print(f"\n📊 Độ dài đường đi:")
-            print(f"   ✓ Cả hai đều tìm được lời giải tối ưu: {steps_astar} bước")
-        
-        if nodes_greedy < nodes_astar:
-            reduction = ((nodes_astar - nodes_greedy) / nodes_astar) * 100
-            print(f"\n📊 Hiệu quả không gian tìm kiếm:")
-            print(f"   ✓ Greedy BeFS hiệu quả hơn, mở rộng ít hơn {nodes_astar - nodes_greedy} nút ({reduction:.1f}%)")
-            print(f"   ✗ A* phải khám phá nhiều nút hơn để đảm bảo tối ưu")
-        
-        print(f"\n💡 Kết luận:")
-        print(f"   1. A* đảm bảo tìm đường đi NGẮN NHẤT ({steps_astar} bước)")
-        print(f"   2. Greedy BeFS nhanh hơn nhưng không đảm bảo tối ưu ({steps_greedy} bước)")
-        print(f"   3. Heuristic Manhattan không bao giờ overestimate khoảng cách thực")
-        print(f"   4. A* sử dụng f(n) = g(n) + h(n) để cân bằng giữa chi phí và heuristic")
-        print(f"   5. Greedy BeFS chỉ dùng h(n), có thể bị lạc vào local minimum")
 
 if __name__ == "__main__":
     main()
