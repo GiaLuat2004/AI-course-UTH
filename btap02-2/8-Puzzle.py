@@ -96,20 +96,19 @@ def print_puzzle_box(state: List[List[int]]):
 # ==================================================
 # THUẬT TOÁN TÌM KIẾM
 # ==================================================
-def search(start: List[List[int]], algorithm: str) -> Tuple[List[List[List[int]]], int, int]:
+def greedy_bfs(start: List[List[int]]) -> Tuple[List[List[List[int]]], int, int]:
     """
-    Tìm kiếm đường đi từ trạng thái ban đầu đến trạng thái đích.
+    Thuật toán Greedy Best-First Search.
+    
+    Chiến lược: Priority = h(n) = Manhattan distance
+    - Chỉ xem xét heuristic, bỏ qua chi phí đã đi
+    - Chọn trạng thái gần đích nhất theo heuristic
     
     Args:
         start: Trạng thái ban đầu (mảng 2D)
-        algorithm: 'astar' hoặc 'greedy'
     
     Returns:
         (path, nodes_expanded, nodes_generated)
-        
-    LOGIC QUAN TRỌNG:
-        - Greedy BFS: Priority = h(n) (chỉ heuristic)
-        - A*: Priority = f(n) = g(n) + h(n) (chi phí thực + heuristic)
     """
     pq = []
     visited: Set[Tuple] = set()
@@ -122,13 +121,8 @@ def search(start: List[List[int]], algorithm: str) -> Tuple[List[List[List[int]]
     # Counter để đảm bảo thứ tự khi priority bằng nhau
     counter = 0
     
-    # LOGIC KHÁC BIỆT:
-    # - Greedy BFS: chỉ dùng h(n)
-    # - A*: dùng g(n) + h(n)
-    if algorithm == "astar":
-        priority = 0 + h0  # f = g + h
-    else:  # greedy
-        priority = h0  # chỉ h
+    # Priority chỉ dựa vào h(n)
+    priority = h0
     
     heapq.heappush(pq, (priority, counter, 0, start, []))
     g_score[start_t] = 0
@@ -166,11 +160,86 @@ def search(start: List[List[int]], algorithm: str) -> Tuple[List[List[List[int]]
             g_score[n_t] = new_g
             h = manhattan_distance(neighbor)
             
-            # LOGIC KHÁC BIỆT GIỮA 2 THUẬT TOÁN:
-            if algorithm == "astar":
-                priority = new_g + h  # A*: f(n) = g(n) + h(n)
-            else:  # greedy
-                priority = h  # Greedy BFS: chỉ dùng h(n)
+            # Greedy BFS: Priority chỉ dùng h(n)
+            priority = h
+            
+            counter += 1
+            heapq.heappush(
+                pq,
+                (priority, counter, new_g, neighbor, path + [current])
+            )
+            nodes_generated += 1
+    
+    return [], nodes_expanded, nodes_generated
+
+
+def astar_search(start: List[List[int]]) -> Tuple[List[List[List[int]]], int, int]:
+    """
+    Thuật toán A* Search.
+    
+    Chiến lược: Priority = f(n) = g(n) + h(n)
+    - g(n): Chi phí thực tế từ điểm bắt đầu (số bước đã đi)
+    - h(n): Ước lượng chi phí đến đích (Manhattan distance)
+    - Kết hợp cả chi phí đã đi và ước lượng còn lại
+    
+    Args:
+        start: Trạng thái ban đầu (mảng 2D)
+    
+    Returns:
+        (path, nodes_expanded, nodes_generated)
+    """
+    pq = []
+    visited: Set[Tuple] = set()
+    g_score: Dict[Tuple, int] = {}
+    
+    # Tính heuristic ban đầu
+    h0 = manhattan_distance(start)
+    start_t = to_tuple(start)
+    
+    # Counter để đảm bảo thứ tự khi priority bằng nhau
+    counter = 0
+    
+    # Priority dựa vào f(n) = g(n) + h(n)
+    priority = 0 + h0  # f = g + h
+    
+    heapq.heappush(pq, (priority, counter, 0, start, []))
+    g_score[start_t] = 0
+    
+    nodes_expanded = 0
+    nodes_generated = 1
+    
+    while pq:
+        _, _, g, current, path = heapq.heappop(pq)
+        current_t = to_tuple(current)
+        
+        # Kiểm tra đã thăm chưa
+        if current_t in visited:
+            continue
+        
+        # Kiểm tra đạt đích chưa
+        if states_equal(current, GOAL):
+            return path + [current], nodes_expanded, nodes_generated
+        
+        visited.add(current_t)
+        nodes_expanded += 1
+        
+        # Mở rộng các trạng thái kề
+        for neighbor in get_neighbors(current):
+            n_t = to_tuple(neighbor)
+            new_g = g + 1
+            
+            if n_t in visited:
+                continue
+            
+            # Kiểm tra xem có tìm được đường đi tốt hơn không
+            if n_t in g_score and new_g >= g_score[n_t]:
+                continue
+            
+            g_score[n_t] = new_g
+            h = manhattan_distance(neighbor)
+            
+            # A*: Priority = f(n) = g(n) + h(n)
+            priority = new_g + h
             
             counter += 1
             heapq.heappush(
@@ -318,7 +387,7 @@ def main():
     print("✓ Ưu điểm: Tìm kiếm nhanh, mở rộng ít nút")
     print("✗ Nhược điểm: Không đảm bảo tìm được lời giải tối ưu")
     
-    path_greedy, nodes_greedy, gen_greedy = search(start, algorithm="greedy")
+    path_greedy, nodes_greedy, gen_greedy = greedy_bfs(start)
     print_solution(path_greedy, "KẾT QUẢ: Greedy Best-First Search", nodes_greedy, gen_greedy)
     
     print("\n" + "─" * 70)
@@ -339,7 +408,7 @@ def main():
     print("✓ Ưu điểm: Đảm bảo tìm được lời giải tối ưu (admissible heuristic)")
     print("✗ Nhược điểm: Có thể mở rộng nhiều nút hơn Greedy BeFS")
     
-    path_astar, nodes_astar, gen_astar = search(start, algorithm="astar")
+    path_astar, nodes_astar, gen_astar = astar_search(start)
     print_solution(path_astar, "KẾT QUẢ: A* Search", nodes_astar, gen_astar)
     
     print("\n" + "─" * 70)
