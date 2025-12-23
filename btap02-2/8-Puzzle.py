@@ -118,25 +118,33 @@ def print_puzzle_box(state: List[List[int]]):
 # THUẬT TOÁN TÌM KIẾM
 # ==================================================
 def greedy_bfs(start: List[List[int]]) -> Tuple[List[List[List[int]]], int, int]:
+    """
+    Greedy Best-First Search
+    Priority = h(n) only (không có g(n))
+    Lưu tuple state trong heap để tránh dùng counter
+    """
     pq = []
     visited: Set[Tuple] = set()
 
-    # push trạng thái ban đầu
+    # push trạng thái ban đầu (dùng tuple thay vì list)
+    start_t = to_tuple(start)
     heapq.heappush(
         pq,
-        (manhattan_distance(start), start, [])
+        (manhattan_distance(start), start_t, [])
     )
 
     nodes_expanded = 0
     nodes_generated = 1
 
     while pq:
-        h, current, path = heapq.heappop(pq)
-        current_t = to_tuple(current)
-
+        h, current_t, path = heapq.heappop(pq)
+        
         # nếu đã thăm → bỏ
         if current_t in visited:
             continue
+
+        # chuyển tuple về list để xử lý
+        current = [list(row) for row in current_t]
 
         # nếu đạt đích
         if states_equal(current, GOAL):
@@ -151,7 +159,7 @@ def greedy_bfs(start: List[List[int]]) -> Tuple[List[List[List[int]]], int, int]
             if n_t not in visited:
                 heapq.heappush(
                     pq,
-                    (manhattan_distance(neighbor), neighbor, path + [current])
+                    (manhattan_distance(neighbor), n_t, path + [current])
                 )
                 nodes_generated += 1
 
