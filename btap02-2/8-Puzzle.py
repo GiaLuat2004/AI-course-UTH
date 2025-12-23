@@ -71,8 +71,8 @@ def get_neighbors(state: List[List[int]]) -> List[List[List[int]]]:
                 x, y = i, j
                 break
 
-    # Thử 4 hướng: lên, xuống, trái, phải
-    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+    # Thử 4 hướng theo ưu tiên: trái, phải, lên, xuống
+    for dx, dy in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
         nx, ny = x + dx, y + dy
         if 0 <= nx < 3 and 0 <= ny < 3:
             # Tạo trạng thái mới bằng cách copy và hoán đổi
@@ -118,65 +118,44 @@ def print_puzzle_box(state: List[List[int]]):
 # THUẬT TOÁN TÌM KIẾM
 # ==================================================
 def greedy_bfs(start: List[List[int]]) -> Tuple[List[List[List[int]]], int, int]:
-    """
-    Greedy Best-First Search (chuẩn sách giáo khoa)
-
-    Priority = h(n) = Manhattan distance
-    - Chỉ dùng heuristic h(n), không dùng g(n)
-    - Graph search: dùng visited set để tránh lặp vô hạn
-    - Không đảm bảo tối ưu vì bỏ qua chi phí đã đi
-    
-    Returns:
-        (path, nodes_expanded, nodes_generated)
-    """
     pq = []
     visited: Set[Tuple] = set()
-    
-    # Counter để tie-breaking khi h(n) bằng nhau (tránh lỗi so sánh state)
-    counter = 0
 
-    # Push trạng thái ban đầu: (h, counter, state, path)
+    # push trạng thái ban đầu
     heapq.heappush(
         pq,
-        (manhattan_distance(start), counter, start, [])
+        (manhattan_distance(start), start, [])
     )
 
     nodes_expanded = 0
     nodes_generated = 1
 
     while pq:
-        h, _, current, path = heapq.heappop(pq)
+        h, current, path = heapq.heappop(pq)
         current_t = to_tuple(current)
 
-        # Nếu đã thăm → bỏ qua (tránh xử lý trùng)
+        # nếu đã thăm → bỏ
         if current_t in visited:
             continue
 
-        # Kiểm tra đạt đích TRƯỚC khi đánh dấu visited
+        # nếu đạt đích
         if states_equal(current, GOAL):
             return path + [current], nodes_expanded, nodes_generated
 
-        # Đánh dấu đã thăm
         visited.add(current_t)
         nodes_expanded += 1
 
-        # Sinh các trạng thái kề
+        # sinh các trạng thái kề
         for neighbor in get_neighbors(current):
             n_t = to_tuple(neighbor)
-            
-            # Chỉ thêm vào queue nếu chưa thăm
             if n_t not in visited:
-                counter += 1
                 heapq.heappush(
                     pq,
-                    (manhattan_distance(neighbor), counter, neighbor, path + [current])
+                    (manhattan_distance(neighbor), neighbor, path + [current])
                 )
                 nodes_generated += 1
 
-    # Không tìm thấy lời giải
     return [], nodes_expanded, nodes_generated
-
-
 
 def astar_search(start: List[List[int]]) -> Tuple[List[List[List[int]]], int, int]:
     """
