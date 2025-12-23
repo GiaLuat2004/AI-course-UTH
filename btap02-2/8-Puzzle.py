@@ -33,6 +33,27 @@ def manhattan_distance(state: List[List[int]]) -> int:
                 dist += abs(i - gi) + abs(j - gj)
     return dist
 
+def print_manhattan_detail(state: List[List[int]]) -> str:
+    """
+    In chi tiết cách tính Manhattan distance cho mỗi ô.
+    Trả về chuỗi mô tả chi tiết.
+    """
+    lines = []
+    lines.append("   Chi tiết tính Manhattan distance:")
+    total = 0
+    
+    for i in range(3):
+        for j in range(3):
+            val = state[i][j]
+            if val != 0:  # Bỏ qua ô trống
+                gi, gj = GOAL_POS[val]  # Vị trí đích của giá trị val
+                dist = abs(i - gi) + abs(j - gj)
+                total += dist
+                lines.append(f"      • Ô {val}: từ ({i},{j}) → ({gi},{gj}) = |{i}-{gi}| + |{j}-{gj}| = {dist}")
+    
+    lines.append(f"      → TỔNG h(n) = {total}")
+    return "\n".join(lines)
+
 # ==================================================
 # SINH TRẠNG THÁI KỀ
 # ==================================================
@@ -271,7 +292,7 @@ def print_solution(path: List[List[List[int]]], title: str, nodes_expanded: int,
     print(f"   • Branching factor trung bình: {nodes_generated / max(nodes_expanded, 1):.2f}")
     
     print("\n" + "=" * 100)
-    print("BẢNG THỐNG KÊ CHI TIẾT CÁC BƯỚC".center(100))
+    print("BẢNG THỐNG KÊ CHI TIẾT CÁC BƯỚC (với chi tiết tính Manhattan distance)".center(100))
     print("=" * 100)
     
     # In header của bảng
@@ -305,8 +326,10 @@ def print_solution(path: List[List[List[int]]], title: str, nodes_expanded: int,
         # In dòng phân cách giữa các bước (trừ bước cuối)
         if step < len(path) - 1:
             print("├"+ "─" * 7 + "─┼─" + "─" * 6 + "─┼─" + "─" * 6 + "─┼─" + "─" * 6 + "─┼─" + "─" * 40 + "┤")
+    
     print("└────────┴────────┴────────┴────────┴─────────────────────────────────────────┘")
-    print("=" * 100)
+    
+    print("\n" + "=" * 100)
 
 def verify_solution(path: List[List[List[int]]]) -> bool:
     """Kiểm tra tính hợp lệ của lời giải."""
@@ -370,6 +393,7 @@ def main():
     
     print("\n📌 TRẠNG THÁI BAN ĐẦU (A):")
     print_puzzle_box(start)
+    print(print_manhattan_detail(start))
     print(f"Manhattan distance đến đích: {manhattan_distance(start)}")
     
     print("\n📌 TRẠNG THÁI ĐÍCH (B):")
