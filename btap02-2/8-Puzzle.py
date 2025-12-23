@@ -119,79 +119,63 @@ def print_puzzle_box(state: List[List[int]]):
 # ==================================================
 def greedy_bfs(start: List[List[int]]) -> Tuple[List[List[List[int]]], int, int]:
     """
-    Thuật toán Greedy Best-First Search.
-    
-    Chiến lược: Priority = h(n) = Manhattan distance
-    - Chỉ xem xét heuristic, bỏ qua chi phí đã đi
-    - Chọn trạng thái gần đích nhất theo heuristic
-    
-    Args:
-        start: Trạng thái ban đầu (mảng 2D)
+    Greedy Best-First Search (chuẩn sách giáo khoa)
+
+    Priority = h(n) = Manhattan distance
+    - Chỉ dùng heuristic h(n), không dùng g(n)
+    - Graph search: dùng visited set để tránh lặp vô hạn
+    - Không đảm bảo tối ưu vì bỏ qua chi phí đã đi
     
     Returns:
         (path, nodes_expanded, nodes_generated)
     """
     pq = []
     visited: Set[Tuple] = set()
-    g_score: Dict[Tuple, int] = {}
     
-    # Tính heuristic ban đầu
-    h0 = manhattan_distance(start)
-    start_t = to_tuple(start)
-    
-    # Counter để đảm bảo thứ tự khi priority bằng nhau
+    # Counter để tie-breaking khi h(n) bằng nhau (tránh lỗi so sánh state)
     counter = 0
-    
-    # Priority chỉ dựa vào h(n)
-    priority = h0
-    
-    heapq.heappush(pq, (priority, counter, 0, start, []))
-    g_score[start_t] = 0
-    
+
+    # Push trạng thái ban đầu: (h, counter, state, path)
+    heapq.heappush(
+        pq,
+        (manhattan_distance(start), counter, start, [])
+    )
+
     nodes_expanded = 0
     nodes_generated = 1
-    
+
     while pq:
-        _, _, g, current, path = heapq.heappop(pq)
+        h, _, current, path = heapq.heappop(pq)
         current_t = to_tuple(current)
-        
-        # Kiểm tra đã thăm chưa
+
+        # Nếu đã thăm → bỏ qua (tránh xử lý trùng)
         if current_t in visited:
             continue
-        
-        # Kiểm tra đạt đích chưa
+
+        # Kiểm tra đạt đích TRƯỚC khi đánh dấu visited
         if states_equal(current, GOAL):
             return path + [current], nodes_expanded, nodes_generated
-        
+
+        # Đánh dấu đã thăm
         visited.add(current_t)
         nodes_expanded += 1
-        
-        # Mở rộng các trạng thái kề
+
+        # Sinh các trạng thái kề
         for neighbor in get_neighbors(current):
             n_t = to_tuple(neighbor)
-            new_g = g + 1
             
-            if n_t in visited:
-                continue
-            
-            # Kiểm tra xem có tìm được đường đi tốt hơn không
-            if n_t in g_score and new_g >= g_score[n_t]:
-                continue
-            
-            g_score[n_t] = new_g
-            h = manhattan_distance(neighbor)
-            
-            # Greedy BFS: Priority chỉ dùng h(n)
-            priority = h
-            
-            counter += 1
-            heapq.heappush(
-                pq,
-                (priority, counter, new_g, neighbor, path + [current])
-            )
-            nodes_generated += 1
-    
+            # Chỉ thêm vào queue nếu chưa thăm
+            if n_t not in visited:
+                counter += 1
+                heapq.heappush(
+                    pq,
+                    (manhattan_distance(neighbor), counter, neighbor, path + [current])
+                )
+                nodes_generated += 1
+
+    # Không tìm thấy lời giải
     return [], nodes_expanded, nodes_generated
+
 
 
 def astar_search(start: List[List[int]]) -> Tuple[List[List[List[int]]], int, int]:
@@ -380,6 +364,13 @@ def verify_solution(path: List[List[List[int]]]) -> bool:
 # MAIN
 # ==================================================
 def main():
+    import sys
+    import io
+    
+    # Fix encoding for Windows
+    if sys.platform == 'win32':
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    
     # Trạng thái ban đầu A: 7 2 4 / 5 _ 6 / 8 3 1
     start = [
         [7, 2, 4],
