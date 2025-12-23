@@ -120,59 +120,114 @@ def get_neighbors(state: WaterJugState) -> List[TupleType[WaterJugState, str]]:
     return neighbors
 
 
-def search(start: WaterJugState, algorithm: str = 'astar') -> TupleType[List[TupleType[WaterJugState, str]], int, int]:
+def greedy_bfs(start: WaterJugState) -> TupleType[List[TupleType[WaterJugState, str]], int, int]:
     """
-    Tìm kiếm đường đi từ trạng thái ban đầu đến trạng thái đích.
+    Thuật toán Greedy Best-First Search (chuẩn sách giáo khoa)
     
-    Args:
-        start: Trạng thái ban đầu
-        algorithm: 'astar' hoặc 'greedy'
+    Priority = h(n) = Manhattan distance to goal
+    - Chỉ dùng heuristic h(n), không dùng g(n)
+    - Graph search: dùng visited set để tránh lặp vô hạn
+    - Không đảm bảo tối ưu vì bỏ qua chi phí đã đi
     
     Returns:
-        (path, nodes_expanded, nodes_generated): 
-            - path: List of (state, action)
-            - nodes_expanded: Số nút được mở rộng
-            - nodes_generated: Số nút được sinh ra
-    
-    Logic:
-        - Greedy BFS: Priority = h(n) (chỉ heuristic)
-        - A*: Priority = f(n) = g(n) + h(n) (chi phí thực + heuristic)
+        (path, nodes_expanded, nodes_generated)
     """
-    # Priority queue: (priority, counter, g_cost, state, path)
+    pq = []
+    visited: Set[TupleType[int, int]] = set()
+    
+    # Counter để tie-breaking khi h(n) bằng nhau
     counter = 0
-    priority_queue = []
-    h = heuristic(start)
     
-    # LOGIC QUAN TRỌNG:
-    # - Greedy BFS: Chỉ xem xét h(n), bỏ qua g(n)
-    # - A*: Xem xét cả g(n) và h(n) để đảm bảo tối ưu
-    if algorithm == 'astar':
-        priority = 0 + h  # f = g + h, với g ban đầu = 0
-    else:  # greedy
-        priority = h  # chỉ dùng h, không quan tâm g
-    
-    heapq.heappush(priority_queue, (priority, counter, 0, start, []))
+    # Push trạng thái ban đầu: (h, counter, state, path)
+    heapq.heappush(pq, (heuristic(start), counter, start, []))
     counter += 1
     
-    visited: Set[TupleType[int, int]] = set()
     nodes_expanded = 0
-    nodes_generated = 1  # Đếm cả node ban đầu
+    nodes_generated = 1
     
-    # Lưu g_cost tốt nhất cho mỗi trạng thái (quan trọng cho A*)
-    g_scores: Dict[TupleType[int, int], int] = {start.to_tuple(): 0}
-    
-    while priority_queue:
-        current_priority, _, g_cost, current_state, path = heapq.heappop(priority_queue)
+    while pq:
+        h, _, current_state, path = heapq.heappop(pq)
         
-        # Kiểm tra đã đạt đích chưa
-        if current_state.is_goal():
-            return path + [(current_state, "ĐẠT MỤC TIÊU!")], nodes_expanded, nodes_generated
-        
-        # Bỏ qua nếu đã thăm
         state_tuple = current_state.to_tuple()
+        
+        # Nếu đã thăm → bỏ qua
         if state_tuple in visited:
             continue
         
+        # Kiểm tra đạt đích TRƯỚC khi đánh dấu visited
+        if current_state.is_goal():
+            return path + [(current_state, "ĐẠT MỤC TIÊU!")], nodes_expanded, nodes_generated
+        
+        # Đánh dấu đã thăm
+        visited.add(state_tuple)
+        nodes_expanded += 1
+        
+        # Sinh các trạng thái kề
+        for neighbor_state, action in get_neighbors(current_state):
+            neighbor_tuple = neighbor_state.to_tuple()
+            
+            # Chỉ thêm vào queue nếu chưa thăm
+            if neighbor_tuple not in visited:
+                heapq.heappush(
+                    pq,
+                    (heuristic(neighbor_state), counter, neighbor_state, path + [(current_state, action)])
+                )
+                counter += 1
+                nodes_generated += 1
+    
+    # Không tìm thấy lời giải
+    return [], nodes_expanded, nodes_generated
+
+
+def astar_search(start: WaterJugState) -> TupleType[List[TupleType[WaterJugState, str]], int, int]:
+    """
+    Thuật toán A* Search (chuẩn sách giáo khoa)
+    
+    Priority = f(n) = g(n) + h(n)
+    - g(n): Chi phí thực tế từ điểm bắt đầu (số bước đã đi)
+    - h(n): Ước lượng chi phí đến đích
+    - Kết hợp cả chi phí đã đi và ước lượng còn lại
+    - Đảm bảo tối ưu với heuristic admissible
+    
+    Returns:
+        (path, nodes_expanded, nodes_generated)
+    """
+    pq = []
+    visited: Set[TupleType[int, int]] = set()
+    g_scores: Dict[TupleType[int, int], int] = {}
+    
+    # Counter để tie-breaking khi f(n) bằng nhau
+    counter = 0
+    
+    # Tính heuristic ban đầu
+    h0 = heuristic(start)
+    start_tuple = start.to_tuple()
+    
+    # Priority = f(n) = g(n) + h(n), với g ban đầu = 0
+    priority = 0 + h0
+    
+    # Push trạng thái ban đầu: (f, counter, g, state, path)
+    heapq.heappush(pq, (priority, counter, 0, start, []))
+    counter += 1
+    g_scores[start_tuple] = 0
+    
+    nodes_expanded = 0
+    nodes_generated = 1
+    
+    while pq:
+        f, _, g, current_state, path = heapq.heappop(pq)
+        
+        state_tuple = current_state.to_tuple()
+        
+        # Nếu đã thăm → bỏ qua
+        if state_tuple in visited:
+            continue
+        
+        # Kiểm tra đạt đích TRƯỚC khi đánh dấu visited
+        if current_state.is_goal():
+            return path + [(current_state, "ĐẠT MỤC TIÊU!")], nodes_expanded, nodes_generated
+        
+        # Đánh dấu đã thăm
         visited.add(state_tuple)
         nodes_expanded += 1
         
@@ -183,7 +238,7 @@ def search(start: WaterJugState, algorithm: str = 'astar') -> TupleType[List[Tup
             if neighbor_tuple in visited:
                 continue
             
-            new_g = g_cost + 1  # Chi phí thực tế từ start đến neighbor
+            new_g = g + 1  # Chi phí thực tế từ start đến neighbor
             
             # Kiểm tra xem có tìm được đường đi tốt hơn không
             if neighbor_tuple in g_scores and new_g >= g_scores[neighbor_tuple]:
@@ -192,18 +247,18 @@ def search(start: WaterJugState, algorithm: str = 'astar') -> TupleType[List[Tup
             g_scores[neighbor_tuple] = new_g
             h = heuristic(neighbor_state)
             
-            # LOGIC KHÁC BIỆT GIỮA 2 THUẬT TOÁN:
-            if algorithm == 'astar':
-                priority = new_g + h  # A*: f(n) = g(n) + h(n)
-            else:  # greedy
-                priority = h  # Greedy BFS: chỉ dùng h(n)
+            # A*: Priority = f(n) = g(n) + h(n)
+            priority = new_g + h
             
-            heapq.heappush(priority_queue, 
-                         (priority, counter, new_g, neighbor_state, path + [(current_state, action)]))
+            heapq.heappush(
+                pq,
+                (priority, counter, new_g, neighbor_state, path + [(current_state, action)])
+            )
             counter += 1
             nodes_generated += 1
     
-    return [], nodes_expanded, nodes_generated  # Không tìm thấy lời giải
+    # Không tìm thấy lời giải
+    return [], nodes_expanded, nodes_generated
 
 
 def print_solution(path: List[TupleType[WaterJugState, str]], title: str, 
@@ -336,7 +391,7 @@ def main():
     print("✓ Ưu điểm: Tìm kiếm nhanh, ít tốn bộ nhớ")
     print("✗ Nhược điểm: Không đảm bảo lời giải tối ưu")
     
-    path_greedy, nodes_greedy, gen_greedy = search(start_state, algorithm='greedy')
+    path_greedy, nodes_greedy, gen_greedy = greedy_bfs(start_state)
     
     print(f"\n{'='*100}")
     print(f"KẾT QUẢ THUẬT TOÁN: GREEDY BEST-FIRST SEARCH")
@@ -361,7 +416,7 @@ def main():
     print("✓ Ưu điểm: Đảm bảo tìm lời giải tối ưu (ít bước nhất)")
     print("✗ Nhược điểm: Có thể khám phá nhiều trạng thái hơn")
     
-    path_astar, nodes_astar, gen_astar = search(start_state, algorithm='astar')
+    path_astar, nodes_astar, gen_astar = astar_search(start_state)
     
     print(f"\n{'='*100}")
     print(f"KẾT QUẢ THUẬT TOÁN: A* SEARCH")
