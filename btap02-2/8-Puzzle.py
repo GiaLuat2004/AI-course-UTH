@@ -206,8 +206,9 @@ def print_solution(path: List[List[List[int]]], title: str, nodes_expanded: int,
     print("=" * 100)
     
     # In header của bảng
-    print(f"\n{'Bước':^8} │ {'h(n)':^6} │ {'g(n)':^6} │ {'f(n)':^6} │ {'Trạng thái Puzzle':^50}")
-    print("─" * 8 + "─┼─" + "─" * 6 + "─┼─" + "─" * 6 + "─┼─" + "─" * 6 + "─┼─" + "─" * 50)
+    print("\n┌────────┬────────┬────────┬────────┬─────────────────────────────────────────┐")
+    print(f"│{'Bước':^8}│ {'h(n)':^6} │ {'g(n)':^6} │ {'f(n)':^6} │{'Trạng thái Puzzle':<40} │")
+    print("├"+ "─" * 7 + "─┼─" + "─" * 6 + "─┼─" + "─" * 6 + "─┼─" + "─" * 6 + "─┼─" + "─" * 40 + "┤")
     
     # In từng bước
     for step, state in enumerate(path):
@@ -226,16 +227,16 @@ def print_solution(path: List[List[List[int]]], title: str, nodes_expanded: int,
         else:
             step_label = str(step)
         
-        print(f"{step_label:^8} │ {h:^6} │ {g:^6} │ {f:^6} │ {puzzle_lines[0]}")
+        print(f"│{step_label:^7} │ {h:^6} │ {g:^6} │ {f:^6} │ {puzzle_lines[0]:<40}│")
         
         # In các dòng còn lại của puzzle
         for i in range(1, len(puzzle_lines)):
-            print(f"{'':^8} │ {'':^6} │ {'':^6} │ {'':^6} │ {puzzle_lines[i]}")
+            print(f"│{'':^7} │ {'':^6} │ {'':^6} │ {'':^6} │ {puzzle_lines[i] :<40}│")
         
         # In dòng phân cách giữa các bước (trừ bước cuối)
         if step < len(path) - 1:
-            print("─" * 8 + "─┼─" + "─" * 6 + "─┼─" + "─" * 6 + "─┼─" + "─" * 6 + "─┼─" + "─" * 50)
-    
+            print("├"+ "─" * 7 + "─┼─" + "─" * 6 + "─┼─" + "─" * 6 + "─┼─" + "─" * 6 + "─┼─" + "─" * 40 + "┤")
+    print("└────────┴────────┴────────┴────────┴─────────────────────────────────────────┘")
     print("=" * 100)
 
 def verify_solution(path: List[List[List[int]]]) -> bool:
