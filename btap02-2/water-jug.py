@@ -404,7 +404,7 @@ def main():
     print("\n" + "="*80)
     print("THUẬT TOÁN 2: A* SEARCH")
     print("="*80)
-    print("📖 Chiến lược: Priority = f(n) = g(n) + h(n)")
+    print("Chiến lược: Priority = f(n) = g(n) + h(n)")
     print("   - g(n): Số bước đã thực hiện")
     print("   - h(n): Ước lượng số bước còn lại")
     print("   - Cân bằng giữa chi phí thực tế và ước lượng")
@@ -418,68 +418,6 @@ def main():
     print(f"{'='*100}")
     print_solution(path_astar, "A* Search", nodes_astar, gen_astar)
     
-    print("\n" + "─"*80)
-    print("KIỂM TRA TÍNH HỢP LỆ CỦA LỜI GIẢI A*:")
-    print("─"*80)
-    verify_solution(path_astar)
-    
-    # =====================================================================
-    # SO SÁNH KẾT QUẢ
-    # =====================================================================
-    print("\n" + "="*80)
-    print("SO SÁNH VÀ ĐÁNH GIÁ KẾT QUẢ")
-    print("="*80)
-    
-    if path_greedy and path_astar:
-        steps_greedy = len(path_greedy) - 1
-        steps_astar = len(path_astar) - 1
-        
-        print(f"\n{'Tiêu chí':<35} {'Greedy BeFS':>20} {'A* Search':>20}")
-        print("─"*80)
-        print(f"{'Số bước thực hiện':<35} {steps_greedy:>20} {steps_astar:>20}")
-        print(f"{'Số nút mở rộng (explored)':<35} {nodes_greedy:>20} {nodes_astar:>20}")
-        print(f"{'Số nút sinh ra (generated)':<35} {gen_greedy:>20} {gen_astar:>20}")
-        
-        print("\n" + "─"*80)
-        print("PHÂN TÍCH CHI TIẾT:")
-        print("─"*80)
-        
-        # So sánh số bước
-        if steps_astar <= steps_greedy:
-            print(f"\n📊 Số bước thực hiện:")
-            print(f"   ✓ A* tìm được lời giải TỐI ƯU với {steps_astar} bước")
-            if steps_astar < steps_greedy:
-                improvement = ((steps_greedy - steps_astar) / steps_greedy) * 100
-                print(f"   ✓ A* ít hơn Greedy BeFS {steps_greedy - steps_astar} bước ({improvement:.1f}% tốt hơn)")
-                print(f"   ✗ Greedy BeFS không tối ưu: {steps_greedy} bước")
-            else:
-                print(f"   ✓ Cả hai đều tìm được lời giải tối ưu")
-        
-        # So sánh hiệu quả
-        print(f"\n📊 Hiệu quả tìm kiếm:")
-        if nodes_greedy < nodes_astar:
-            reduction = ((nodes_astar - nodes_greedy) / nodes_astar) * 100
-            print(f"   ✓ Greedy BeFS hiệu quả hơn, mở rộng ít hơn {nodes_astar - nodes_greedy} nút ({reduction:.1f}%)")
-        else:
-            print(f"   ✓ A* tương đương hoặc hiệu quả hơn về không gian tìm kiếm")
-        
-        # Kết luận
-        print("\n" + "─"*80)
-        print("KẾT LUẬN:")
-        print("─"*80)
-        print(f"\n💡 Nhận xét về bài toán Water Jug:")
-        print(f"   1. A* đảm bảo tìm lời giải tối ưu với {steps_astar} bước")
-        print(f"   2. Greedy BeFS nhanh hơn nhưng có thể không tối ưu ({steps_greedy} bước)")
-        print(f"   3. Heuristic sử dụng: h(n) = |y - {TARGET}| (khoảng cách từ bình B đến mục tiêu)")
-        print(f"   4. Heuristic admissible vì không bao giờ overestimate số bước thực tế")
-        print(f"   5. Với bài toán này, không gian trạng thái nhỏ ({(JUG_A_CAPACITY+1)*(JUG_B_CAPACITY+1)} trạng thái)")
-        
-        print(f"\n🎯 Xác nhận:")
-        if path_astar:
-            final_state = path_astar[-1][0]
-            print(f"   ✓ Đã đong được {TARGET} lít nước thành công!")
-            print(f"   ✓ Trạng thái cuối: Bình A = {final_state.jug_a}L, Bình B = {final_state.jug_b}L")
-
 
 if __name__ == "__main__":
     main()

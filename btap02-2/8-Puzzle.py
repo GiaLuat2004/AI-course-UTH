@@ -114,100 +114,6 @@ def print_puzzle_box(state: List[List[int]]):
     for line in print_puzzle_inline(state):
         print(line)
 
-def print_detailed_path(path: List[List[List[int]]], algorithm: str):
-    """
-    In chi tiết 4 bước đầu và 4 bước cuối trong path với các trạng thái kề được sinh ra.
-    
-    LƯU Ý: Với A*, neighbor được CHỌN không nhất thiết có f(n) nhỏ nhất trong số
-    các neighbors của state hiện tại. A* chọn NODE có f(n) nhỏ nhất trong TOÀN BỘ
-    priority queue (gồm cả các node từ các state khác). Đánh dấu "← CHỌN" chỉ 
-    để chỉ ra neighbor nào nằm trong đường đi solution cuối cùng.
-    """
-    print(f"\n{'='* 80}")
-    print(f"CHI TIẾT CÁC BƯỚC TÌM KIẾM - {algorithm}".center(80))
-    print(f"{'='* 80}")
-  
-    total_steps = len(path) - 1  # Số bước (không tính trạng thái đầu)
-    
-    # Xác định các bước cần in
-    if total_steps <= 8:
-        # Nếu tổng số bước <= 8, in tất cả
-        steps_to_print = list(range(total_steps))
-    else:
-        # In 4 bước đầu và 4 bước cuối
-        steps_to_print = list(range(4)) + list(range(total_steps - 4, total_steps))
-    
-    for step in range(total_steps):
-        if step not in steps_to_print:
-            # In dấu ... cho phần bị bỏ qua
-            if step == 4:
-                print(f"\n{'='* 80}")
-                print(f"... (BỎ QUA {total_steps - 8} BƯỚC GIỮA) ...".center(80))
-                print(f"{'='* 80}\n")
-            continue
-        
-        state = path[step]
-        g = step
-        h = manhattan_distance(state)
-        f = g + h
-        
-        print(f"\n{'='* 80}")
-        print(f"BƯỚC {step + 1}/{total_steps}: g(n)={g}, h(n)={h}, f(n)={f}")
-        print(f"{'='* 80}")
-        
-        print("\nTrạng thái hiện tại:")
-        for row in state:
-            print(f"  {row}")
-        
-        # Sinh các trạng thái kề
-        neighbors = get_neighbors(state)
-        next_state = path[step + 1]
-        
-        print(f"\n→ Các trạng thái kề được sinh ra ({len(neighbors)} trạng thái):")
-        print("  (Tất cả được thêm vào priority queue, chờ được chọn theo f(n) min)\n")
-        
-        # Tìm neighbor có f(n) min trong neighbors hiện tại
-        min_f_in_neighbors = float('inf')
-        for neighbor in neighbors:
-            new_g = g + 1
-            new_h = manhattan_distance(neighbor)
-            new_f = new_g + new_h
-            if new_f < min_f_in_neighbors:
-                min_f_in_neighbors = new_f
-        
-        for idx, neighbor in enumerate(neighbors, 1):
-            new_g = g + 1
-            new_h = manhattan_distance(neighbor)
-            new_f = new_g + new_h
-            
-            # Đánh dấu trạng thái được chọn và neighbor có f min
-            is_chosen = states_equal(neighbor, next_state)
-            is_min_f = (new_f == min_f_in_neighbors)
-            
-            marker = ""
-            if is_chosen:
-                marker = " ← CHỌN (trong solution path)"
-            elif is_min_f and "A*" in algorithm:
-                marker = " ← f(n) min trong neighbors này"
-            
-            print(f"  Kề {idx}: g(n)={new_g}, h(n)={new_h}, f(n)={new_f}{marker}")
-            for row in neighbor:
-                print(f"    {row}")
-            print()
-    
-    # In bước cuối (đích)
-    final_state = path[-1]
-    g = len(path) - 1
-    h = manhattan_distance(final_state)
-    f = g + h
-    
-    print(f"\n{'='* 80}")
-    print(f"BƯỚC {len(path)}/{len(path)-1}: ĐẠT ĐÍCH - g(n)={g}, h(n)={h}, f(n)={f}")
-    print(f"{'='* 80}")
-    print("\nTrạng thái đích:")
-    for row in final_state:
-        print(f"  {row}")
-    print(f"\n{'='* 80}\n")
 
 # ==================================================
 # THUẬT TOÁN TÌM KIẾM
@@ -220,34 +126,26 @@ def greedy_bfs(start: List[List[int]]) -> Tuple[List[List[List[int]]], int, int]
     """
     pq = []
     visited: Set[Tuple] = set()
-
     # push trạng thái ban đầu (dùng tuple thay vì list)
     start_t = to_tuple(start)
     heapq.heappush(
         pq,
         (manhattan_distance(start), start_t, [])
     )
-
     nodes_expanded = 0
     nodes_generated = 1
-
     while pq:
         h, current_t, path = heapq.heappop(pq)
-        
         # nếu đã thăm → bỏ
         if current_t in visited:
             continue
-
         # chuyển tuple về list để xử lý
         current = [list(row) for row in current_t]
-
         # nếu đạt đích
         if states_equal(current, GOAL):
             return path + [current], nodes_expanded, nodes_generated
-
         visited.add(current_t)
         nodes_expanded += 1
-
         # sinh các trạng thái kề
         for neighbor in get_neighbors(current):
             n_t = to_tuple(neighbor)
@@ -257,7 +155,6 @@ def greedy_bfs(start: List[List[int]]) -> Tuple[List[List[List[int]]], int, int]
                     (manhattan_distance(neighbor), n_t, path + [current])
                 )
                 nodes_generated += 1
-
     return [], nodes_expanded, nodes_generated
 
 def astar_search(start: List[List[int]]) -> Tuple[List[List[List[int]]], int, int]:
