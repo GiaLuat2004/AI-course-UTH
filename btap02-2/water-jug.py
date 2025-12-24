@@ -48,17 +48,12 @@ def heuristic(state: WaterJugState) -> int:
     Hàm heuristic ước lượng khoảng cách đến mục tiêu.
     
     Logic:
-    - Tính khoảng cách nhỏ nhất từ trạng thái hiện tại đến mục tiêu
-    - Xem xét cả lượng nước trong từng bình và tổng
+    - Sử dụng công thức h(n) = |y - 7| (khoảng cách từ bình B đến mục tiêu)
+    - y là lượng nước hiện tại trong bình B
     - Heuristic admissible: không bao giờ overestimate
     """
-    # Khoảng cách đến mục tiêu cho từng trường hợp
-    dist_a = abs(state.jug_a - TARGET)
-    dist_b = abs(state.jug_b - TARGET)
-    dist_total = abs((state.jug_a + state.jug_b) - TARGET)
-    
-    # Chọn khoảng cách nhỏ nhất
-    return min(dist_a, dist_b, dist_total)
+    # Khoảng cách từ bình B đến mục tiêu
+    return abs(state.jug_b - TARGET)
 
 
 def get_neighbors(state: WaterJugState) -> List[TupleType[WaterJugState, str]]:
@@ -385,9 +380,9 @@ def main():
     print("\n" + "="*80)
     print("THUẬT TOÁN 1: GREEDY BEST-FIRST SEARCH (Greedy BeFS)")
     print("="*80)
-    print("📖 Chiến lược: Priority = h(n) = min(|A-7|, |B-7|, |(A+B)-7|)")
-    print("   - Chỉ xem xét khoảng cách đến mục tiêu")
-    print("   - Chọn trạng thái gần mục tiêu nhất")
+    print("📖 Chiến lược: Priority = h(n) = |y - 7| (khoảng cách từ bình B đến mục tiêu)")
+    print("   - Chỉ xem xét khoảng cách của bình B đến 7 lít")
+    print("   - Chọn trạng thái có bình B gần 7 lít nhất")
     print("✓ Ưu điểm: Tìm kiếm nhanh, ít tốn bộ nhớ")
     print("✗ Nhược điểm: Không đảm bảo lời giải tối ưu")
     
@@ -475,7 +470,7 @@ def main():
         print(f"\n💡 Nhận xét về bài toán Water Jug:")
         print(f"   1. A* đảm bảo tìm lời giải tối ưu với {steps_astar} bước")
         print(f"   2. Greedy BeFS nhanh hơn nhưng có thể không tối ưu ({steps_greedy} bước)")
-        print(f"   3. Heuristic sử dụng: min(|A-{TARGET}|, |B-{TARGET}|, |(A+B)-{TARGET}|)")
+        print(f"   3. Heuristic sử dụng: h(n) = |y - {TARGET}| (khoảng cách từ bình B đến mục tiêu)")
         print(f"   4. Heuristic admissible vì không bao giờ overestimate số bước thực tế")
         print(f"   5. Với bài toán này, không gian trạng thái nhỏ ({(JUG_A_CAPACITY+1)*(JUG_B_CAPACITY+1)} trạng thái)")
         
