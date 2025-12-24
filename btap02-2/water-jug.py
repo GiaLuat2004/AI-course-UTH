@@ -359,14 +359,6 @@ def main():
     print(f"   • Mục tiêu: Đong được {TARGET} lít nước")
     print(f"   • Trạng thái ban đầu: Cả hai bình đều rỗng")
     
-    print(f"\n📖 CÁC HÀNH ĐỘNG CÓ THỂ THỰC HIỆN:")
-    print(f"   1. Đổ đầy bình A (từ nguồn nước)")
-    print(f"   2. Đổ đầy bình B (từ nguồn nước)")
-    print(f"   3. Đổ hết nước từ bình A")
-    print(f"   4. Đổ hết nước từ bình B")
-    print(f"   5. Rót nước từ bình A sang bình B")
-    print(f"   6. Rót nước từ bình B sang bình A")
-    
     # Trạng thái ban đầu: cả hai bình đều rỗng
     start_state = WaterJugState(0, 0)
     
