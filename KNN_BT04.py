@@ -8,7 +8,7 @@ data = {
 }
 # Test với experience = 6.3
 test_experience = 6.3
-k_value = 5
+k_value = 3
 
 X = np.array(data['Experience']).reshape(-1, 1)
 y = np.array(data['Salary'])
@@ -78,7 +78,7 @@ def knn_predictor(X_train, y_train, x_test, k=3, verbose=True, use_unicode=False
     # In thông tin chi tiết về k láng giềng gần nhất (nếu verbose=True)
     if verbose:
         neighbors_data = [(exp, salary, dist) for dist, salary, exp in k_nearest]
-        print_neighbors_table(neighbors_data, f"{k} láng giềng gần nhất với experience = {x_test}", use_unicode)
+        print_neighbors_table(neighbors_data, f"{k} láng giềng gần nhất với experience = {x_test}", use_unicode=True)
     
     # Tính trung bình salary của k láng giềng (cho bài toán hồi quy)
     predicted_salary = np.mean([salary for _, salary, _ in k_nearest])
@@ -115,7 +115,7 @@ print(f"Salary dự đoán (sklearn) = {predicted_salary_sklearn:.2f}")
 distances_sklearn, indices_sklearn = knn_sklearn.kneighbors(X_test)
 
 neighbors_sklearn = [(X[idx][0], y[idx], dist) for idx, dist in zip(indices_sklearn[0], distances_sklearn[0])]
-print_neighbors_table(neighbors_sklearn, f"{k_value} láng giềng gần nhất (theo sklearn)", use_unicode=False)
+print_neighbors_table(neighbors_sklearn, f"{k_value} láng giềng gần nhất (theo sklearn)", use_unicode=True)
 
 # So sánh kết quả
 print("\n" + "=" * 60)
